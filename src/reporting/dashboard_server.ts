@@ -877,6 +877,8 @@ export class DashboardServer {
           mode: mode === 'LIVE' ? 'LIVE' : 'PAPER',
           strategy,
           capital,
+          walletAddress: String(body.walletAddress ?? '').trim(),
+          privateKey: String(body.privateKey ?? '').trim(),
           riskLimits: {
             maxPositionSize: maxPos,
             maxExposurePerMarket: maxExp,
@@ -975,6 +977,8 @@ export class DashboardServer {
       const liveCreds = this.walletLiveCredentials.get(walletId);
       (detail.wallet as Record<string, unknown>).walletAddress = liveCreds?.walletAddress ?? '';
       (detail.wallet as Record<string, unknown>).hasPrivateKey = Boolean(liveCreds?.privateKey);
+      (detail.wallet as Record<string, unknown>).liveCredentialStatus =
+        typeof walletObj?.getLiveCredentialStatus === 'function' ? walletObj.getLiveCredentialStatus() : undefined;
       json(res, 200, detail);
       return;
     }
@@ -1038,6 +1042,9 @@ export class DashboardServer {
           }
         }
         this.walletLiveCredentials.set(walletId, current);
+        if (typeof wallet.setLiveCredentials === 'function') {
+          wallet.setLiveCredentials(current.walletAddress, current.privateKey);
+        }
       }
 
       if (changes.length === 0) {
@@ -2678,11 +2685,14 @@ function renderWalletDetail(d){
     '</div>';
 
   const hasPk = !!w.hasPrivateKey;
+  const liveStatus = w.liveCredentialStatus || {};
   html+='<div class="ws-section"><h3>🔐 LIVE Wallet Credentials</h3>'+
     '<div class="ws-form-grid">'+
     '<div class="ws-field"><label>Wallet Address</label><input type="text" id="ws-wallet-address" value="'+(w.walletAddress||'')+'" placeholder="0x…"><div class="hint">Deposit destination for this LIVE wallet</div></div>'+
     '<div class="ws-field"><label>Private Key</label><input type="password" id="ws-private-key" value="" placeholder="'+(hasPk?'Key already saved — enter to replace':'Paste private key to save')+'"><div class="hint">Stored only in memory for this running process. Leave blank to keep existing key.</div></div>'+
     '<div class="ws-field"><label>Private Key Status</label><input type="text" value="'+(hasPk?'Configured':'Not set')+'" disabled></div>'+
+    '<div class="ws-field"><label>API Key Status</label><input type="text" value="'+(liveStatus.apiKeyConfigured?'Configured':'Missing POLYMARKET_API_KEY')+'" disabled></div>'+
+    '<div class="ws-field"><label>Live Readiness</label><input type="text" value="'+((liveStatus.walletAddressConfigured&&liveStatus.privateKeyConfigured&&liveStatus.apiKeyConfigured)?'Ready':'Missing credentials')+'" disabled></div>'+
     '</div>'+
     '<div class="ws-actions"><button class="btn" onclick="saveWalletCredentials(this.dataset.walletId)" data-wallet-id="'+w.walletId+'">Save Credentials</button><span id="ws-cred-msg" class="ws-msg" style="display:none"></span></div>'+
     '</div>';

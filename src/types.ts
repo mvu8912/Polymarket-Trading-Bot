@@ -14,6 +14,9 @@ export interface WalletConfig {
   strategy: string;
   capital: number;
   riskLimits?: Partial<RiskLimits>;
+  /** Optional LIVE wallet metadata/credentials (used by runtime dashboard-created wallets) */
+  walletAddress?: string;
+  privateKey?: string;
 }
 
 export interface EnvironmentConfig {

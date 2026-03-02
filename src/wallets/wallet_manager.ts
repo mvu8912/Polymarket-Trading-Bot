@@ -19,6 +19,13 @@ export interface ExecutionWallet {
   setDisplayName?(name: string): void;
   /** Update risk limits at runtime */
   updateRiskLimits?(limits: Partial<import('../types').RiskLimits>): void;
+  /** Optional LIVE credential updates at runtime */
+  setLiveCredentials?(walletAddress?: string, privateKey?: string): void;
+  getLiveCredentialStatus?(): {
+    walletAddressConfigured: boolean;
+    privateKeyConfigured: boolean;
+    apiKeyConfigured: boolean;
+  };
 }
 
 export class WalletManager {
