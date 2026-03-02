@@ -2691,8 +2691,8 @@ function renderWalletDetail(d){
     '<div class="ws-field"><label>Wallet Address</label><input type="text" id="ws-wallet-address" value="'+(w.walletAddress||'')+'" placeholder="0x…"><div class="hint">Deposit destination for this LIVE wallet</div></div>'+
     '<div class="ws-field"><label>Private Key</label><input type="password" id="ws-private-key" value="" placeholder="'+(hasPk?'Key already saved — enter to replace':'Paste private key to save')+'"><div class="hint">Stored only in memory for this running process. Leave blank to keep existing key.</div></div>'+
     '<div class="ws-field"><label>Private Key Status</label><input type="text" value="'+(hasPk?'Configured':'Not set')+'" disabled></div>'+
-    '<div class="ws-field"><label>API Key Status</label><input type="text" value="'+(liveStatus.apiKeyConfigured?'Configured':'Missing POLYMARKET_API_KEY')+'" disabled></div>'+
-    '<div class="ws-field"><label>Live Readiness</label><input type="text" value="'+((liveStatus.walletAddressConfigured&&liveStatus.privateKeyConfigured&&liveStatus.apiKeyConfigured)?'Ready':'Missing credentials')+'" disabled></div>'+
+    '<div class="ws-field"><label>Wallet Address Status</label><input type="text" value="'+(liveStatus.walletAddressConfigured?'Configured':'Optional (not set)')+'" disabled></div>'+
+    '<div class="ws-field"><label>Live Readiness</label><input type="text" value="'+(liveStatus.privateKeyConfigured?'Ready':'Missing private key')+'" disabled></div>'+
     '</div>'+
     '<div class="ws-actions"><button class="btn" onclick="saveWalletCredentials(this.dataset.walletId)" data-wallet-id="'+w.walletId+'">Save Credentials</button><span id="ws-cred-msg" class="ws-msg" style="display:none"></span></div>'+
     '</div>';

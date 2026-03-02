@@ -64,11 +64,10 @@ export class PolymarketWallet {
     this.privateKey = privateKey?.trim();
   }
 
-  getLiveCredentialStatus(): { walletAddressConfigured: boolean; privateKeyConfigured: boolean; apiKeyConfigured: boolean } {
+  getLiveCredentialStatus(): { walletAddressConfigured: boolean; privateKeyConfigured: boolean } {
     return {
       walletAddressConfigured: Boolean(this.walletAddress),
       privateKeyConfigured: Boolean(this.privateKey || process.env.POLYMARKET_PRIVATE_KEY),
-      apiKeyConfigured: Boolean(process.env.POLYMARKET_API_KEY),
     };
   }
 
@@ -79,22 +78,11 @@ export class PolymarketWallet {
     price: number;
     size: number;
   }): Promise<void> {
-    const apiKey = process.env.POLYMARKET_API_KEY;
     const privateKey = this.privateKey || process.env.POLYMARKET_PRIVATE_KEY;
     const walletAddress = this.walletAddress;
 
-    if (!walletAddress) {
-      logger.warn({ walletId: this.state.walletId }, 'LIVE wallet address not set; refusing LIVE order');
-      return;
-    }
-
     if (!privateKey) {
       logger.warn({ walletId: this.state.walletId }, 'POLYMARKET_PRIVATE_KEY not set (or wallet private key missing); refusing LIVE order');
-      return;
-    }
-
-    if (!apiKey) {
-      logger.warn('POLYMARKET_API_KEY not set; refusing LIVE order');
       return;
     }
 
@@ -118,7 +106,7 @@ export class PolymarketWallet {
     logger.info(
       {
         walletId: this.state.walletId,
-        walletAddress,
+        walletAddress: walletAddress || '(not provided)',
         marketId: request.marketId,
         price: request.price,
         size: request.size,

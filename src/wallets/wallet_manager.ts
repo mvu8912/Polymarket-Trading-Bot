@@ -24,7 +24,6 @@ export interface ExecutionWallet {
   getLiveCredentialStatus?(): {
     walletAddressConfigured: boolean;
     privateKeyConfigured: boolean;
-    apiKeyConfigured: boolean;
   };
 }
 
