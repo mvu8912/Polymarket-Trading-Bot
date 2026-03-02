@@ -2427,8 +2427,8 @@ function renderWallets(wl){
         }).join('')+'</div></div>';
     }
 
-    return '<div class="w-card" style="cursor:pointer" onclick="openWalletDetail(\\''+w.walletId+'\\')" title="Click for detailed analytics">'+
-      '<div class="w-hdr"><div class="w-left"><span class="w-id">'+dName+'</span><span class="w-strat">'+w.strategy+'</span></div><div style="display:flex;align-items:center;gap:8px"><button class="toggle-btn '+toggleCls+'" onclick="event.stopPropagation();toggleWallet(\\''+w.walletId+'\\','+isPaused+')" title="'+(isPaused?'Start':'Pause')+' this wallet"><span class="toggle-dot"></span>'+toggleLabel+'</button><span class="badge badge-'+w.mode+'">'+w.mode+'</span></div></div>'+
+    return '<div class="w-card" style="cursor:pointer" onclick="openWalletDetail(this.dataset.walletId)" data-wallet-id="'+w.walletId+'" title="Click for detailed analytics">'+
+      '<div class="w-hdr"><div class="w-left"><span class="w-id">'+dName+'</span><span class="w-strat">'+w.strategy+'</span></div><div style="display:flex;align-items:center;gap:8px"><button class="toggle-btn '+toggleCls+'" onclick="event.stopPropagation();toggleWallet(this.dataset.walletId,'+isPaused+')" data-wallet-id="'+w.walletId+'" title="'+(isPaused?'Start':'Pause')+' this wallet"><span class="toggle-dot"></span>'+toggleLabel+'</button><span class="badge badge-'+w.mode+'">'+w.mode+'</span></div></div>'+
       '<div class="w-body"><div class="m-row">'+
       '<div class="m-cell"><div class="m-label">Capital</div><div class="m-val">$'+fmt(w.capitalAllocated,0)+'</div></div>'+
       '<div class="m-cell"><div class="m-label">Available</div><div class="m-val">$'+fmt(w.availableBalance,0)+'</div></div>'+
@@ -2511,15 +2511,15 @@ function renderWalletDetail(d){
   html+='<div class="wd-status-bar">'+
     '<div class="wd-status-indicator '+stCls+'"></div>'+
     '<div class="wd-status-text">'+stText+'<span class="sub">'+w.strategy+' \u00B7 '+w.mode+' \u00B7 $'+fmt(w.capitalAllocated,0)+' capital</span></div>'+
-    '<button class="toggle-btn '+stCls+'" onclick="toggleWalletFromDetail(\\''+w.walletId+'\\','+isPaused+')"><span class="toggle-dot"></span>'+(isPaused?'\u25B6 Start':'\u23F8 Pause')+'</button>'+
+    '<button class="toggle-btn '+stCls+'" onclick="toggleWalletFromDetail(this.dataset.walletId,'+isPaused+')" data-wallet-id="'+w.walletId+'"><span class="toggle-dot"></span>'+(isPaused?'\u25B6 Start':'\u23F8 Pause')+'</button>'+
     '</div>';
 
   /* ── Tabs ── */
   html+='<div class="wd-tabs">'+
-    '<button class="wd-tab'+(wdActiveTab==='overview'?' active':'')+'" data-tab="overview" onclick="switchWdTab(\\'overview\\')">Overview</button>'+
-    '<button class="wd-tab'+(wdActiveTab==='positions'?' active':'')+'" data-tab="positions" onclick="switchWdTab(\\'positions\\')">Positions ('+w.openPositions.length+')</button>'+
-    '<button class="wd-tab'+(wdActiveTab==='trades'?' active':'')+'" data-tab="trades" onclick="switchWdTab(\\'trades\\')">Trade History ('+d.tradeHistory.length+')</button>'+
-    '<button class="wd-tab'+(wdActiveTab==='settings'?' active':'')+'" data-tab="settings" onclick="switchWdTab(\\'settings\\')">Settings</button>'+
+    '<button class="wd-tab'+(wdActiveTab==='overview'?' active':'')+'" data-tab="overview" onclick="switchWdTab(this.dataset.tab)">Overview</button>'+
+    '<button class="wd-tab'+(wdActiveTab==='positions'?' active':'')+'" data-tab="positions" onclick="switchWdTab(this.dataset.tab)">Positions ('+w.openPositions.length+')</button>'+
+    '<button class="wd-tab'+(wdActiveTab==='trades'?' active':'')+'" data-tab="trades" onclick="switchWdTab(this.dataset.tab)">Trade History ('+d.tradeHistory.length+')</button>'+
+    '<button class="wd-tab'+(wdActiveTab==='settings'?' active':'')+'" data-tab="settings" onclick="switchWdTab(this.dataset.tab)">Settings</button>'+
     '</div>';
 
   /* ═══ TAB: Overview ═══ */
@@ -2634,7 +2634,7 @@ function renderWalletDetail(d){
     '<div class="ws-field"><label>Strategy</label><input type="text" value="'+w.strategy+'" disabled><div class="hint">Strategy cannot be changed after creation</div></div>'+
     '<div class="ws-field"><label>Mode</label><input type="text" value="'+w.mode+'" disabled><div class="hint">Trading mode (PAPER / LIVE)</div></div>'+
     '</div>'+
-    '<div class="ws-actions"><button class="btn" onclick="saveWalletName(\\''+w.walletId+'\\')">Save Name</button><span id="ws-name-msg" class="ws-msg" style="display:none"></span></div>'+
+    '<div class="ws-actions"><button class="btn" onclick="saveWalletName(this.dataset.walletId)" data-wallet-id="'+w.walletId+'">Save Name</button><span id="ws-name-msg" class="ws-msg" style="display:none"></span></div>'+
     '</div>';
 
   /* Risk Limits */
@@ -2647,7 +2647,7 @@ function renderWalletDetail(d){
     '<div class="ws-field"><label>Max Open Trades</label><input type="number" id="ws-rl-maxOpenTrades" value="'+rl.maxOpenTrades+'" min="1" step="1"><div class="hint">Maximum concurrent open positions</div></div>'+
     '<div class="ws-field"><label>Max Drawdown (%)</label><input type="number" id="ws-rl-maxDrawdown" value="'+(rl.maxDrawdown*100).toFixed(1)+'" min="0" max="100" step="0.5"><div class="hint">Maximum portfolio drawdown percentage</div></div>'+
     '</div>'+
-    '<div class="ws-actions"><button class="btn" onclick="saveRiskLimits(\\''+w.walletId+'\\')">Save Risk Limits</button><span id="ws-risk-msg" class="ws-msg" style="display:none"></span></div>'+
+    '<div class="ws-actions"><button class="btn" onclick="saveRiskLimits(this.dataset.walletId)" data-wallet-id="'+w.walletId+'">Save Risk Limits</button><span id="ws-risk-msg" class="ws-msg" style="display:none"></span></div>'+
     '</div>';
 
   /* Wallet Performance Summary (read-only) */
@@ -2664,7 +2664,7 @@ function renderWalletDetail(d){
   /* Danger Zone */
   html+='<div class="ws-danger"><h3>\u26A0\uFE0F Danger Zone</h3>'+
     '<p>Permanently remove this wallet and all its data. This action cannot be undone.</p>'+
-    '<button class="btn btn-danger" onclick="deleteWalletFromDetail(\\''+w.walletId+'\\')">Delete Wallet</button>'+
+    '<button class="btn btn-danger" onclick="deleteWalletFromDetail(this.dataset.walletId)" data-wallet-id="'+w.walletId+'">Delete Wallet</button>'+
     '</div>';
 
   html+='</div>'; /* /settings */
@@ -3002,7 +3002,7 @@ function renderWalletTable(wl){
     const isPaused = pausedMap[w.walletId] || false;
     const toggleCls = isPaused ? 'paused' : 'running';
     const toggleLabel = isPaused ? '\u25B6 Start' : '\u23F8 Running';
-    return '<tr onclick="openWalletDetail(\\''+w.walletId+'\\')" title="Click for detailed analytics">'+
+    return '<tr onclick="openWalletDetail(this.dataset.walletId)" data-wallet-id="'+w.walletId+'" title="Click for detailed analytics">'+
       '<td><strong>'+w.walletId+'</strong> <span style="font-size:10px;color:var(--accent)">\uD83D\uDD0D</span></td>'+
       '<td><span class="badge badge-'+w.mode+'">'+w.mode+'</span></td>'+
       '<td>'+w.assignedStrategy+'</td>'+
@@ -3010,7 +3010,7 @@ function renderWalletTable(wl){
       '<td>$'+fmt(w.availableBalance,2)+'</td>'+
       '<td class="'+pnlCls(w.realizedPnl)+'">$'+fmt(w.realizedPnl)+'</td>'+
       '<td>'+w.openPositions.length+'</td>'+
-      '<td style="display:flex;gap:6px;align-items:center"><button class="toggle-btn '+toggleCls+'" onclick="event.stopPropagation();toggleWallet(\\''+w.walletId+'\\','+isPaused+')" title="'+(isPaused?'Start':'Pause')+' this wallet"><span class="toggle-dot"></span>'+toggleLabel+'</button><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteWallet(\\''+w.walletId+'\\')">Remove</button></td>'+
+      '<td style="display:flex;gap:6px;align-items:center"><button class="toggle-btn '+toggleCls+'" onclick="event.stopPropagation();toggleWallet(this.dataset.walletId,'+isPaused+')" data-wallet-id="'+w.walletId+'" title="'+(isPaused?'Start':'Pause')+' this wallet"><span class="toggle-dot"></span>'+toggleLabel+'</button><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteWallet(this.dataset.walletId)" data-wallet-id="'+w.walletId+'">Remove</button></td>'+
       '</tr>';
   }).join('');
 }
@@ -3272,7 +3272,7 @@ function renderWhaleList(data){
         '<span class="whale-stat '+pnlCls+'"><span class="ws-val">'+(w.totalPnlBps>0?'+':'')+w.totalPnlBps+'</span> bps</span>'+
         '<span class="whale-stat"><span class="ws-val">'+w.consecutiveLosses+'</span> streak</span>'+
       '</div>'+
-      '<button class="whale-remove-btn" onclick="removeWhale(\''+w.address+'\')">\u2716 Remove</button>'+
+      '<button class="whale-remove-btn" onclick="removeWhale(this.dataset.address)" data-address="'+w.address+'">\u2716 Remove</button>'+
     '</div>';
   }).join('');
 }
@@ -3656,8 +3656,8 @@ async function loadCandidates(){
         '<td>'+c.markets7d+'</td>'+
         '<td>'+fmt(c.rankScore,0)+'</td>'+
         '<td style="font-size:11px">'+(c.suggestedTags||[]).join(', ')+'</td>'+
-        '<td><button onclick="approveCandidate(\\''+c.address+'\\')" style="background:var(--green);color:#000;border:none;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">Track</button> '+
-        '<button onclick="muteCandidate(\\''+c.address+'\\')" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">Mute</button></td>'+
+        '<td><button onclick="approveCandidate(&quot;'+c.address+'&quot;)" style="background:var(--green);color:#000;border:none;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">Track</button> '+
+        '<button onclick="muteCandidate(&quot;'+c.address+'&quot;)" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">Mute</button></td>'+
         '</tr>';
     }).join('');
   }catch(e){console.error(e)}
@@ -3813,9 +3813,9 @@ async function loadScannerProfiles(){
       const pnlC=p.estimatedPnlUsd>=0?'pnl-pos':'pnl-neg';
       const roiC=p.estimatedRoi>=0?'pnl-pos':'pnl-neg';
       const tags=(p.suggestedTags||[]).slice(0,3).map(t=>'<span style="font-size:10px;background:var(--surface2);padding:2px 6px;border-radius:3px;margin-right:2px">'+t+'</span>').join('');
-      const tracked=p.alreadyTracked?'<span style="color:var(--green);font-size:11px">✓ Tracked</span>':'<button onclick="event.stopPropagation();promoteScanned(\\\''+p.address+'\\\')" style="background:var(--blue);color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">Track</button>';
+      const tracked=p.alreadyTracked?'<span style="color:var(--green);font-size:11px">✓ Tracked</span>':'<button onclick="event.stopPropagation();promoteScanned(this.dataset.address)" data-address="'+p.address+'" style="background:var(--blue);color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">Track</button>';
       const holdDisplay=p.avgHoldTimeHrs>0?(p.avgHoldTimeHrs<1?(p.avgHoldTimeHrs*60).toFixed(0)+'m':p.avgHoldTimeHrs<24?p.avgHoldTimeHrs.toFixed(1)+'h':(p.avgHoldTimeHrs/24).toFixed(1)+'d'):'-';
-      return '<tr style="cursor:pointer" onclick="openScannerProfile(\\\''+p.address+'\\\')" title="Click for details">'+
+      return '<tr style="cursor:pointer" onclick="openScannerProfile(this.dataset.address)" data-address="'+p.address+'" title="Click for details">'+
         '<td><code style="font-size:11px">'+addr+'</code></td>'+
         '<td class="'+scoreCls+'">'+p.compositeScore.toFixed(0)+'</td>'+
         '<td>$'+fmt(p.totalVolumeUsd,0)+'</td>'+
@@ -3928,7 +3928,7 @@ async function openScannerProfile(address){
 
     // Track button
     if(!p.alreadyTracked){
-      html+='<div style="margin-top:20px;text-align:center"><button onclick="promoteScanned(\\\''+p.address+'\\\');document.getElementById(\\\'wh-scan-profile-modal\\\').style.display=\\\'none\\\'" style="background:var(--blue);color:#fff;border:none;padding:10px 28px;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600">🐋 Track This Whale</button></div>';
+      html+='<div style="margin-top:20px;text-align:center"><button onclick="promoteScanned(this.dataset.address);document.getElementById(\\\'wh-scan-profile-modal\\\').style.display=\\\'none\\\'" data-address="'+p.address+'" style="background:var(--blue);color:#fff;border:none;padding:10px 28px;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600">🐋 Track This Whale</button></div>';
     }else{
       html+='<div style="margin-top:20px;text-align:center;color:var(--green);font-size:14px">✓ Already Tracked</div>';
     }
@@ -4549,4 +4549,3 @@ setInterval(refresh, 5000);
 </body>
 </html>`;
 }
-
