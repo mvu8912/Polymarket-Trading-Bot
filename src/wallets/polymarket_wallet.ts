@@ -1,11 +1,13 @@
-import { WalletConfig, WalletState, TradeRecord } from '../types';
+import { RiskLimits, WalletConfig, WalletState, TradeRecord } from '../types';
 import { logger } from '../reporting/logs';
 
 export class PolymarketWallet {
   private state: WalletState;
   private readonly trades: TradeRecord[] = [];
+  private displayName: string = '';
 
   constructor(config: WalletConfig, assignedStrategy: string) {
+    this.displayName = config.id;
     this.state = {
       walletId: config.id,
       mode: 'LIVE',
@@ -34,6 +36,23 @@ export class PolymarketWallet {
 
   updateBalance(delta: number): void {
     this.state.availableBalance += delta;
+  }
+
+  getDisplayName(): string {
+    return this.displayName;
+  }
+
+  setDisplayName(name: string): void {
+    this.displayName = name.trim() || this.state.walletId;
+  }
+
+  updateRiskLimits(limits: Partial<RiskLimits>): void {
+    if (limits.maxPositionSize !== undefined) this.state.riskLimits.maxPositionSize = limits.maxPositionSize;
+    if (limits.maxExposurePerMarket !== undefined) this.state.riskLimits.maxExposurePerMarket = limits.maxExposurePerMarket;
+    if (limits.maxDailyLoss !== undefined) this.state.riskLimits.maxDailyLoss = limits.maxDailyLoss;
+    if (limits.maxOpenTrades !== undefined) this.state.riskLimits.maxOpenTrades = limits.maxOpenTrades;
+    if (limits.maxDrawdown !== undefined) this.state.riskLimits.maxDrawdown = limits.maxDrawdown;
+    logger.info({ walletId: this.state.walletId, riskLimits: this.state.riskLimits }, 'Risk limits updated');
   }
 
   async placeOrder(request: {
