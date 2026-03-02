@@ -1,0 +1,29 @@
+services:
+  bot:
+    init: true
+    build: .
+    network_mode: service:vpn
+    depends_on:
+    - vpn
+    # ------------------------------------
+    # X11
+    # ------------------------------------
+    devices:
+    - /dev/dri:/dev/dri
+    volumes:
+    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    - /home/mv/.Xauthority:/home/mv/.Xauthority
+    - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket
+    - ./:/app
+    cap_add:
+    - SYS_ADMIN
+    security_opt:
+    - seccomp:unconfined
+    - apparmor:unconfined
+    environment:
+      DISPLAY: ${DISPLAY:-:0.0}
+      XAUTHORITY: /home/mv/.Xauthority
+      ENABLE_LIVE_TRADING: true
+
+include:
+- /home/mv/openclaw/vpn.yml

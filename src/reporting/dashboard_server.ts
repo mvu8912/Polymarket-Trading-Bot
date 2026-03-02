@@ -1,6 +1,5 @@
 import http from 'http';
 import { WalletManager } from '../wallets/wallet_manager';
-import { PaperWallet } from '../wallets/paper_wallet';
 import { MarketFetcher } from '../data/market_fetcher';
 import { buildDashboardPayload } from './dashboard_api';
 import { listStrategies } from '../strategies/registry';
@@ -64,11 +63,16 @@ interface StrategyCatalogEntry {
   tags?: string[];
 }
 
+interface WalletLiveCredentials {
+  walletAddress: string;
+  privateKey?: string;
+}
+
 /* ──────────────────────────────────────────────────────────────
    Wallet Detail Analytics Builder
    Computes comprehensive metrics from wallet state + trade history
    ────────────────────────────────────────────────────────────── */
-import type { WalletState, TradeRecord, Position } from '../types';
+import type { WalletState, TradeRecord } from '../types';
 
 function buildWalletDetail(wallet: WalletState, trades: TradeRecord[], marketPrices?: Map<string, number>) {
   const sorted = [...trades].sort((a, b) => a.timestamp - b.timestamp);
@@ -692,6 +696,7 @@ export class DashboardServer {
   private sseClients: Set<http.ServerResponse> = new Set();
   private sseInterval?: ReturnType<typeof setInterval>;
   private readonly walletDisplayNames = new Map<string, string>();
+  private readonly walletLiveCredentials = new Map<string, WalletLiveCredentials>();
 
   constructor(
     private readonly walletManager: WalletManager,
@@ -866,12 +871,14 @@ export class DashboardServer {
       const maxTrades = Number(body.maxOpenTrades ?? 10);
       const maxDd = Number(body.maxDrawdown ?? 0.2);
 
-      const wallet = new PaperWallet(
+      this.walletManager.registerWallet(
         {
           id: walletId,
           mode: mode === 'LIVE' ? 'LIVE' : 'PAPER',
           strategy,
           capital,
+          walletAddress: String(body.walletAddress ?? '').trim(),
+          privateKey: String(body.privateKey ?? '').trim(),
           riskLimits: {
             maxPositionSize: maxPos,
             maxExposurePerMarket: maxExp,
@@ -881,8 +888,17 @@ export class DashboardServer {
           },
         },
         strategy,
+        process.env.ENABLE_LIVE_TRADING === 'true',
       );
-      this.walletManager.addWallet(wallet);
+
+      if (mode === 'LIVE') {
+        const walletAddress = String(body.walletAddress ?? '').trim();
+        const privateKey = String(body.privateKey ?? '').trim();
+        this.walletLiveCredentials.set(walletId, {
+          walletAddress,
+          ...(privateKey ? { privateKey } : {}),
+        });
+      }
 
       /* Connect the new wallet to the engine so its strategy runs */
       if (this.engine) {
@@ -901,6 +917,7 @@ export class DashboardServer {
       }
       const removed = this.walletManager.removeWallet(walletId);
       if (removed) {
+        this.walletLiveCredentials.delete(walletId);
         json(res, 200, { ok: true, message: `Wallet "${walletId}" removed` });
       } else {
         json(res, 404, { ok: false, error: `Wallet "${walletId}" not found` });
@@ -957,6 +974,11 @@ export class DashboardServer {
         (typeof walletObj?.getDisplayName === 'function' ? walletObj.getDisplayName() : walletId);
       (detail.wallet as Record<string, unknown>).paused =
         this.engine?.isRunnerPaused(walletId) ?? false;
+      const liveCreds = this.walletLiveCredentials.get(walletId);
+      (detail.wallet as Record<string, unknown>).walletAddress = liveCreds?.walletAddress ?? '';
+      (detail.wallet as Record<string, unknown>).hasPrivateKey = Boolean(liveCreds?.privateKey);
+      (detail.wallet as Record<string, unknown>).liveCredentialStatus =
+        typeof walletObj?.getLiveCredentialStatus === 'function' ? walletObj.getLiveCredentialStatus() : undefined;
       json(res, 200, detail);
       return;
     }
@@ -1002,8 +1024,31 @@ export class DashboardServer {
         }
       }
 
+      /* LIVE wallet credentials (dashboard-only metadata) */
+      if (typeof body.walletAddress === 'string' || typeof body.privateKey === 'string') {
+        const current = this.walletLiveCredentials.get(walletId) ?? { walletAddress: '' };
+        if (typeof body.walletAddress === 'string') {
+          current.walletAddress = body.walletAddress.trim();
+          changes.push(`walletAddress → "${current.walletAddress || '(empty)'}"`);
+        }
+        if (typeof body.privateKey === 'string') {
+          const pk = body.privateKey.trim();
+          if (pk) {
+            current.privateKey = pk;
+            changes.push('privateKey updated');
+          } else {
+            delete current.privateKey;
+            changes.push('privateKey cleared');
+          }
+        }
+        this.walletLiveCredentials.set(walletId, current);
+        if (typeof wallet.setLiveCredentials === 'function') {
+          wallet.setLiveCredentials(current.walletAddress, current.privateKey);
+        }
+      }
+
       if (changes.length === 0) {
-        json(res, 400, { ok: false, error: 'No valid fields to update. Supported: displayName, riskLimits' });
+        json(res, 400, { ok: false, error: 'No valid fields to update. Supported: displayName, riskLimits, walletAddress, privateKey' });
         return;
       }
 
@@ -1755,6 +1800,8 @@ footer{text-align:center;padding:24px;color:var(--muted);font-size:11px;border-t
       </div>
       <div class="fg"><label>Strategy</label><select id="cw-strategy"></select></div>
       <div class="fg"><label>Capital ($)</label><input id="cw-capital" type="number" min="1" value="500" placeholder="500"></div>
+      <div class="fg"><label>Wallet Address (LIVE)</label><input id="cw-wallet-address" placeholder="0x…"></div>
+      <div class="fg"><label>Private Key (LIVE)</label><input id="cw-private-key" type="password" placeholder="Paste only for live wallets"></div>
       <div class="fg"><label>Max Position Size</label><input id="cw-maxpos" type="number" placeholder="auto"></div>
       <div class="fg"><label>Max Exposure / Market</label><input id="cw-maxexp" type="number" placeholder="auto"></div>
       <div class="fg"><label>Max Daily Loss</label><input id="cw-maxloss" type="number" placeholder="auto"></div>
@@ -2637,6 +2684,19 @@ function renderWalletDetail(d){
     '<div class="ws-actions"><button class="btn" onclick="saveWalletName(this.dataset.walletId)" data-wallet-id="'+w.walletId+'">Save Name</button><span id="ws-name-msg" class="ws-msg" style="display:none"></span></div>'+
     '</div>';
 
+  const hasPk = !!w.hasPrivateKey;
+  const liveStatus = w.liveCredentialStatus || {};
+  html+='<div class="ws-section"><h3>🔐 LIVE Wallet Credentials</h3>'+
+    '<div class="ws-form-grid">'+
+    '<div class="ws-field"><label>Wallet Address</label><input type="text" id="ws-wallet-address" value="'+(w.walletAddress||'')+'" placeholder="0x…"><div class="hint">Deposit destination for this LIVE wallet</div></div>'+
+    '<div class="ws-field"><label>Private Key</label><input type="password" id="ws-private-key" value="" placeholder="'+(hasPk?'Key already saved — enter to replace':'Paste private key to save')+'"><div class="hint">Stored only in memory for this running process. Leave blank to keep existing key.</div></div>'+
+    '<div class="ws-field"><label>Private Key Status</label><input type="text" value="'+(hasPk?'Configured':'Not set')+'" disabled></div>'+
+    '<div class="ws-field"><label>API Key Status</label><input type="text" value="'+(liveStatus.apiKeyConfigured?'Configured':'Missing POLYMARKET_API_KEY')+'" disabled></div>'+
+    '<div class="ws-field"><label>Live Readiness</label><input type="text" value="'+((liveStatus.walletAddressConfigured&&liveStatus.privateKeyConfigured&&liveStatus.apiKeyConfigured)?'Ready':'Missing credentials')+'" disabled></div>'+
+    '</div>'+
+    '<div class="ws-actions"><button class="btn" onclick="saveWalletCredentials(this.dataset.walletId)" data-wallet-id="'+w.walletId+'">Save Credentials</button><span id="ws-cred-msg" class="ws-msg" style="display:none"></span></div>'+
+    '</div>';
+
   /* Risk Limits */
   const rl = w.riskLimits;
   html+='<div class="ws-section"><h3>\uD83D\uDEE1 Risk Limits</h3>'+
@@ -2706,6 +2766,28 @@ async function saveWalletName(walletId){
     const j=await r.json();
     showWsMsg('ws-name-msg',j.ok?'ok':'err',j.message||j.error);
   }catch(e){showWsMsg('ws-name-msg','err','Network error')}
+}
+
+async function saveWalletCredentials(walletId){
+  const addr=(document.getElementById('ws-wallet-address')||{}).value?.trim()||'';
+  const pk=(document.getElementById('ws-private-key')||{}).value?.trim()||'';
+  const msg=document.getElementById('ws-cred-msg');
+  try{
+    const r=await fetch('/api/wallets/'+encodeURIComponent(walletId),{
+      method:'PATCH',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({walletAddress:addr,privateKey:pk})
+    });
+    const j=await r.json();
+    if(r.ok){
+      if(msg){msg.style.display='inline';msg.style.color='var(--green)';msg.textContent='✓ Credentials saved';}
+      const pkInput=document.getElementById('ws-private-key');
+      if(pkInput) pkInput.value='';
+    }else{
+      if(msg){msg.style.display='inline';msg.style.color='var(--red)';msg.textContent='✗ '+(j.error||'Failed to save');}
+    }
+  }catch(e){
+    if(msg){msg.style.display='inline';msg.style.color='var(--red)';msg.textContent='✗ Network error';}
+  }
 }
 
 async function saveRiskLimits(walletId){
@@ -3348,6 +3430,8 @@ $('#cw-submit').addEventListener('click',async()=>{
     mode:$('#cw-mode').value,
     strategy:$('#cw-strategy').value,
     capital:Number($('#cw-capital').value),
+    walletAddress:$('#cw-wallet-address').value.trim(),
+    privateKey:$('#cw-private-key').value.trim(),
   };
   const mp=$('#cw-maxpos').value;if(mp)body.maxPositionSize=Number(mp);
   const me=$('#cw-maxexp').value;if(me)body.maxExposurePerMarket=Number(me);
@@ -3358,7 +3442,7 @@ $('#cw-submit').addEventListener('click',async()=>{
     const r=await fetch('/api/wallets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const j=await r.json();
     showMsg('cw-msg',j.ok?'ok':'err',j.message||j.error);
-    if(j.ok){$('#cw-id').value='';$('#cw-capital').value='500';refresh()}
+    if(j.ok){$('#cw-id').value='';$('#cw-capital').value='500';$('#cw-wallet-address').value='';$('#cw-private-key').value='';refresh()}
   }catch(e){showMsg('cw-msg','err','Network error')}
 });
 
