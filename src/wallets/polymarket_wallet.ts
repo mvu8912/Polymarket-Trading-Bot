@@ -64,10 +64,11 @@ export class PolymarketWallet {
     this.privateKey = privateKey?.trim();
   }
 
-  getLiveCredentialStatus(): { walletAddressConfigured: boolean; privateKeyConfigured: boolean } {
+  getLiveCredentialStatus(): { walletAddressConfigured: boolean; privateKeyConfigured: boolean; l2HeadersConfigured: boolean } {
     return {
       walletAddressConfigured: Boolean(this.walletAddress),
       privateKeyConfigured: Boolean(this.privateKey || process.env.POLYMARKET_PRIVATE_KEY),
+      l2HeadersConfigured: hasL2Credentials(),
     };
   }
 
@@ -83,6 +84,14 @@ export class PolymarketWallet {
 
     if (!privateKey) {
       logger.warn({ walletId: this.state.walletId }, 'POLYMARKET_PRIVATE_KEY not set (or wallet private key missing); refusing LIVE order');
+      return;
+    }
+
+    if (!hasL2Credentials()) {
+      logger.warn(
+        { walletId: this.state.walletId },
+        'Missing CLOB L2 credentials (POLY_API_KEY, POLY_PASSPHRASE, POLY_SECRET); refusing LIVE order',
+      );
       return;
     }
 
@@ -114,4 +123,8 @@ export class PolymarketWallet {
       `LIVE order submitted (stub executor) ${request.side} ${request.outcome} market=${request.marketId} price=${request.price} size=${request.size}`,
     );
   }
+}
+
+function hasL2Credentials(): boolean {
+  return Boolean(process.env.POLY_API_KEY && process.env.POLY_PASSPHRASE && process.env.POLY_SECRET);
 }
