@@ -24,6 +24,10 @@ services:
       DISPLAY: ${DISPLAY:-:0.0}
       XAUTHORITY: /home/mv/.Xauthority
       ENABLE_LIVE_TRADING: true
+    command: 
+    - perl
+    - -e
+    - exec qw( node dist/cli.js start --config config.yaml );
 
 include:
 - /home/mv/openclaw/vpn.yml

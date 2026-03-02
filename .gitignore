@@ -44,3 +44,7 @@ sample_convergence_report.json
 
 # Package lock (optional — keep if you want reproducible installs)
 # package-lock.json
+.npm
+.bash_history
+.config
+.package-lock.json
