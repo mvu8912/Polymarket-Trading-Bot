@@ -1,4 +1,27 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('@polymarket/clob-client', () => {
+  class ClobClient {
+    async createOrDeriveApiKey() {
+      return { key: 'k', secret: 's', passphrase: 'p' };
+    }
+    async getTickSize() {
+      return { minimum_tick_size: '0.01' };
+    }
+    async getNegRisk() {
+      return false;
+    }
+    async createAndPostOrder() {
+      return { orderID: 'oid_1', status: 'matched', transactionsHashes: ['0xtx'] };
+    }
+  }
+  return {
+    ClobClient,
+    Side: { BUY: 'BUY', SELL: 'SELL' },
+    OrderType: { GTC: 'GTC' },
+  };
+});
+
 import { PolymarketWallet } from '../src/wallets/polymarket_wallet';
 
 describe('PolymarketWallet', () => {
@@ -6,37 +29,37 @@ describe('PolymarketWallet', () => {
     delete process.env.POLY_API_KEY;
     delete process.env.POLY_PASSPHRASE;
     delete process.env.POLY_SECRET;
+    vi.restoreAllMocks();
   });
 
-  it('refuses live stub order when L2 credentials are missing', async () => {
+  it('shows L2 as derivable when only private key is configured', () => {
     const wallet = new PolymarketWallet(
       {
         id: 'live_wallet_1',
         mode: 'LIVE',
         strategy: 'momentum',
         capital: 1000,
-        privateKey: '0xabc123',
+        privateKey: '0x1111111111111111111111111111111111111111111111111111111111111111',
       },
       'momentum',
     );
 
-    await wallet.placeOrder({
-      marketId: 'market-1',
-      outcome: 'YES',
-      side: 'BUY',
-      price: 0.5,
-      size: 10,
-    });
-
-    expect(wallet.getTradeHistory()).toHaveLength(0);
-    expect(wallet.getLiveCredentialStatus().privateKeyConfigured).toBe(true);
-    expect(wallet.getLiveCredentialStatus().l2HeadersConfigured).toBe(false);
+    const status = wallet.getLiveCredentialStatus();
+    expect(status.privateKeyConfigured).toBe(true);
+    expect(status.l2HeadersConfigured).toBe(false);
+    expect(status.l2DerivableWithPrivateKey).toBe(true);
   });
 
-  it('allows live stub order with private key and L2 credentials configured', async () => {
-    process.env.POLY_API_KEY = 'api-key';
-    process.env.POLY_PASSPHRASE = 'passphrase';
-    process.env.POLY_SECRET = 'secret';
+  it('posts a live order by deriving L2 creds from private key when env creds are absent', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        ({
+          ok: true,
+          json: async () => ({ clobTokenIds: '["token_yes","token_no"]', outcomes: '["Yes","No"]' }),
+        }) as unknown as Response,
+      ),
+    );
 
     const wallet = new PolymarketWallet(
       {
@@ -44,7 +67,8 @@ describe('PolymarketWallet', () => {
         mode: 'LIVE',
         strategy: 'momentum',
         capital: 1000,
-        privateKey: '0xabc123',
+        privateKey: '0x1111111111111111111111111111111111111111111111111111111111111111',
+        walletAddress: '0x1111111111111111111111111111111111111111',
       },
       'momentum',
     );

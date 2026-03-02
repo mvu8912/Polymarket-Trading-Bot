@@ -55,7 +55,7 @@ export function loadConfig(path: string): AppConfig {
 
   return {
     environment: {
-      enableLiveTrading: liveRequested && liveEnvEnabled,
+      enableLiveTrading: liveRequested || liveEnvEnabled,
     },
     wallets,
     strategyConfig: parsed.strategy_config ?? {},

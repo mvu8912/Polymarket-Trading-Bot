@@ -16,8 +16,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@polymarket/clob-client": "^5.3.0",
     "better-sqlite3": "^12.6.2",
     "commander": "^12.1.0",
+    "ethers": "^5.8.0",
     "pino": "^9.3.2",
     "pino-pretty": "^11.2.0",
     "yaml": "^2.4.5"

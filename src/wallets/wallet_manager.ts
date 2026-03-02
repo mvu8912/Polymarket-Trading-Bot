@@ -25,6 +25,7 @@ export interface ExecutionWallet {
     walletAddressConfigured: boolean;
     privateKeyConfigured: boolean;
     l2HeadersConfigured: boolean;
+    l2DerivableWithPrivateKey: boolean;
   };
 }
 

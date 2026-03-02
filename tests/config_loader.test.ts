@@ -32,3 +32,22 @@ describe('config_loader', () => {
     expect(config.wallets[0].privateKey).toBe('0xprivate');
   });
 });
+
+
+  it('enables live trading when env var is true even if yaml flag is false', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pm-config-env-'));
+    const cfgPath = path.join(tmpDir, 'config.yaml');
+    fs.writeFileSync(
+      cfgPath,
+      [
+        'environment:',
+        '  enable_live_trading: false',
+        'wallets: []',
+      ].join('\n'),
+      'utf8',
+    );
+
+    process.env.ENABLE_LIVE_TRADING = 'true';
+    const config = loadConfig(cfgPath);
+    expect(config.environment.enableLiveTrading).toBe(true);
+  });
